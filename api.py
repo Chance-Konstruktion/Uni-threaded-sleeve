@@ -1,5 +1,5 @@
 from Uni_threaded_rod.api import thread
-from .presets import PRESETS
+from .database import PRESETS
 
 def create_sleeve_data(spec="M10", length=40, wall_thickness=3.5, outer_add=0, clearance=0.0, preset=None, **kwargs):
     if preset and preset in PRESETS:
