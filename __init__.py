@@ -1,17 +1,19 @@
-import bpy
 import importlib
 import sys
 
+import bpy
+
 bl_info = {
     "name": "Uni-threaded-sleeve",
-    "author": "Chance-Konstruktion + Grok",
-    "version": (1, 3, 0),
+    "author": "Chance-Konstruktion",
+    "version": (1, 4, 0),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar > Uni-threaded-sleeve",
-    "description": "Gewindemuffen Generator - benötigt Uni-threaded-rod",
+    "description": "Gewindemuffen-Generator (benoetigt Uni-threaded-rod).",
     "category": "Mesh",
     "warning": "Uni-threaded-rod muss zuerst installiert und aktiviert sein!",
 }
+
 
 def _runtime(name):
     full = f"{__name__}.{name}"
@@ -19,14 +21,16 @@ def _runtime(name):
         return importlib.reload(sys.modules[full])
     return importlib.import_module(f".{name}", __name__)
 
-# Modules laden
+
+rod_link = _runtime("rod_link")
+database = _runtime("database")
+presets = _runtime("presets")
 api = _runtime("api")
 sleeve_builder = _runtime("sleeve_builder")
-presets = _runtime("presets")
-database = _runtime("database")
 ui_panel = _runtime("ui_panel")
 
 classes = getattr(ui_panel, "classes", [])
+
 
 def register():
     for cls in classes:
@@ -34,8 +38,12 @@ def register():
     if hasattr(ui_panel, "register_properties"):
         ui_panel.register_properties()
 
+
 def unregister():
     for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
+        try:
+            bpy.utils.unregister_class(cls)
+        except Exception:
+            pass
     if hasattr(bpy.types.Scene, "sleeve_props"):
         del bpy.types.Scene.sleeve_props

@@ -1,46 +1,143 @@
 import bpy
-import bmesh
-from mathutils import Vector
 
-def create_sleeve(props):
-    from .api import create_sleeve_data
-    data = create_sleeve_data(
-        spec=props.diameter_enum,
-        length=props.length,
-        wall_thickness=props.wall_thickness,
-        outer_add=getattr(props, 'outer_add', 0),
-        clearance=props.clearance,
-        preset=props.preset
+from .api import create_sleeve_data
+from .rod_link import get_rod_database, get_rod_geometry_engine, get_rod_mesh_builder
+
+
+MM = 0.001  # Rods mesh_builder skaliert intern mm -> Blender-Meter
+
+
+def _add_outer_body(outer_dia_mm, length_mm, shape):
+    radius_m = (outer_dia_mm * 0.5) * MM
+    depth_m = length_mm * MM
+    if shape == "HEX":
+        bpy.ops.mesh.primitive_cylinder_add(
+            vertices=6, radius=radius_m, depth=depth_m,
+            location=(0.0, 0.0, depth_m * 0.5),
+        )
+    else:
+        bpy.ops.mesh.primitive_cylinder_add(
+            vertices=64, radius=radius_m, depth=depth_m,
+            location=(0.0, 0.0, depth_m * 0.5),
+        )
+    return bpy.context.active_object
+
+
+def _build_thread_cutter(standard_key, diameter, pitch, length, starts, handedness, clearance):
+    geom = get_rod_geometry_engine()
+    mb = get_rod_mesh_builder()
+    db = get_rod_database()
+
+    standard = db.THREAD_STANDARDS.get(standard_key, {})
+    taper_ratio = standard.get("special_params", {}).get("taper_ratio", 0.0)
+
+    profile, _warnings = geom.generate_profile(
+        standard_key,
+        diameter,
+        pitch,
+        tolerance_class="6H",
+        internal=True,
+        clearance=clearance,
+        return_warnings=True,
     )
 
+    bm = mb.create_thread_mesh(
+        profile_points=profile,
+        diameter=diameter,
+        pitch=pitch,
+        length=length + 2.0,  # Ueberstand fuer sauberes Boolean
+        starts=max(1, int(starts)),
+        handedness=handedness,
+        end_type="FLAT",
+        taper_ratio=taper_ratio,
+        lod_level="FINAL",
+        segment_override=64,
+    )
+
+    mesh = bpy.data.meshes.new("SleeveCutter")
+    bm.to_mesh(mesh)
+    bm.free()
+    cutter = bpy.data.objects.new("SleeveCutter", mesh)
+    bpy.context.collection.objects.link(cutter)
+    cutter.location = (0.0, 0.0, -1.0 * MM)  # 1 mm unter den Sleeve schieben
+    return cutter
+
+
+def _add_flange(sleeve_obj, outer_dia_mm, length_mm, both_sides=False):
+    """Sehr einfache Flanschplatte unten (und optional oben)."""
+    flange_dia = outer_dia_mm * 1.5
+    flange_thick = max(2.0, outer_dia_mm * 0.08)
+    radius_m = (flange_dia * 0.5) * MM
+    depth_m = flange_thick * MM
+
+    bpy.ops.mesh.primitive_cylinder_add(
+        vertices=64, radius=radius_m, depth=depth_m,
+        location=(0.0, 0.0, depth_m * 0.5),
+    )
+    bottom_flange = bpy.context.active_object
+
+    objs = [sleeve_obj, bottom_flange]
+    if both_sides:
+        bpy.ops.mesh.primitive_cylinder_add(
+            vertices=64, radius=radius_m, depth=depth_m,
+            location=(0.0, 0.0, length_mm * MM - depth_m * 0.5),
+        )
+        objs.append(bpy.context.active_object)
+
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = sleeve_obj
+    bpy.ops.object.join()
+    return bpy.context.active_object
+
+
+def create_sleeve(props):
+    spec = getattr(props, "diameter_enum", "10") or "10"
+    standard_key = getattr(props, "standard", "METRIC_ISO")
+    length_mm = float(props.length)
+    starts = int(getattr(props, "starts", 1))
+    handedness = getattr(props, "handedness", "RIGHT")
+    clearance = float(getattr(props, "clearance", 0.0))
+    shape = getattr(props, "shape", "CYLINDER")
+    add_flange = bool(getattr(props, "add_flange", False))
+
+    data = create_sleeve_data(
+        spec=spec,
+        length=length_mm,
+        wall_thickness=props.wall_thickness,
+        outer_add=getattr(props, "outer_add", 0.0),
+        clearance=clearance,
+        preset=getattr(props, "preset", None),
+        standard=standard_key,
+        starts=starts,
+        handedness=handedness,
+    )
+
+    diameter = data["diameter_mm"]
+    pitch = data["pitch_mm"]
     outer_dia = data["outer_diameter"]
 
-    # Außengeometrie
-    if getattr(props, 'shape', 'CYLINDER') == 'CYLINDER':
-        bpy.ops.mesh.primitive_cylinder_add(radius=outer_dia/2, depth=props.length, location=(0,0,0))
-    else:  # HEX
-        bpy.ops.mesh.primitive_circle_add(radius=outer_dia/2, fill_type='NGON', vertices=6, location=(0,0,0))
-        obj = bpy.context.active_object
-        mod = obj.modifiers.new("Solidify", 'SOLIDIFY')
-        mod.thickness = props.length
-        bpy.ops.object.convert(target='MESH')
+    sleeve = _add_outer_body(outer_dia, length_mm, shape)
+    sleeve.name = f"Sleeve_{standard_key}_{spec}"
 
-    sleeve = bpy.context.active_object
-    sleeve.name = f"Sleeve_{props.preset or 'M'}{props.diameter_enum}"
+    cutter = _build_thread_cutter(
+        standard_key, diameter, pitch, length_mm, starts, handedness, clearance,
+    )
 
-    # Innengewinde mit Screw Modifier + Boolean
-    bpy.ops.mesh.primitive_cylinder_add(radius=data["inner_diameter"]/2, depth=props.length+4, location=(0,0,-2))
-    cutter = bpy.context.active_object
-    mod = cutter.modifiers.new("Screw", 'SCREW')
-    mod.angle = 6.283185 * (props.length / data.get("pitch_mm", 1.5))
-    mod.steps = 64
-    mod.iterations = 1
-    mod.screw_offset = props.length
-
-    bool_mod = sleeve.modifiers.new("ThreadCut", 'BOOLEAN')
-    bool_mod.operation = 'DIFFERENCE'
-    bool_mod.object = cutter
+    bpy.context.view_layer.objects.active = sleeve
+    mod = sleeve.modifiers.new("ThreadCut", "BOOLEAN")
+    mod.operation = "DIFFERENCE"
+    mod.object = cutter
+    if hasattr(mod, "solver"):
+        try:
+            mod.solver = "EXACT"
+        except Exception:
+            pass
     bpy.ops.object.modifier_apply(modifier="ThreadCut")
     bpy.data.objects.remove(cutter, do_unlink=True)
+
+    if add_flange:
+        sleeve = _add_flange(sleeve, outer_dia, length_mm, both_sides=False)
 
     return sleeve
