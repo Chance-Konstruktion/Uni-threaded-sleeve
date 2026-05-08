@@ -18,3 +18,7 @@ Vollständiger parametrischer Gewindemuffen / Sleeve Generator für Blender.
 3. Beide aktivieren
 
 Tab erscheint im Sidebar unter **Uni-threaded-sleeve**.
+
+## Lizenz
+
+Dieses Projekt steht unter der [GNU General Public License v3.0](LICENSE).
