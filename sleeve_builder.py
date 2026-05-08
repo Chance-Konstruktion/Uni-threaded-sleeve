@@ -1,6 +1,7 @@
 import bpy
 
 from .api import create_sleeve_data
+from .presets import PRESETS
 from .rod_link import get_rod_database, get_rod_geometry_engine, get_rod_mesh_builder
 
 
@@ -101,14 +102,28 @@ def create_sleeve(props):
     clearance = float(getattr(props, "clearance", 0.0))
     shape = getattr(props, "shape", "CYLINDER")
     add_flange = bool(getattr(props, "add_flange", False))
+    wall_thickness = float(props.wall_thickness)
+    outer_add = float(getattr(props, "outer_add", 0.0))
+
+    preset_key = getattr(props, "preset", None)
+    preset_cfg = PRESETS.get(preset_key) if preset_key else None
+    if preset_cfg:
+        if "flange" in preset_cfg:
+            add_flange = bool(preset_cfg["flange"])
+        if "wall" in preset_cfg:
+            wall_thickness = float(preset_cfg["wall"])
+        if "outer_add" in preset_cfg:
+            outer_add = float(preset_cfg["outer_add"])
+        if "clearance" in preset_cfg:
+            clearance = float(preset_cfg["clearance"])
 
     data = create_sleeve_data(
         spec=spec,
         length=length_mm,
-        wall_thickness=props.wall_thickness,
-        outer_add=getattr(props, "outer_add", 0.0),
+        wall_thickness=wall_thickness,
+        outer_add=outer_add,
         clearance=clearance,
-        preset=getattr(props, "preset", None),
+        preset=preset_key,
         standard=standard_key,
         starts=starts,
         handedness=handedness,
