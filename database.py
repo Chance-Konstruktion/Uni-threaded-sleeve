@@ -1,18 +1,55 @@
-from Uni_threaded_rod.database import STANDARDS as ROD_STANDARDS, get_diameter_items_for_standard as rod_get_diameters
+"""Lazy-Forwarder zu Uni-threaded-rod.database.
 
-# Erweiterte Datenbank für Sleeves
-STANDARDS = ROD_STANDARDS
+Kein Top-Level-Import des Rod-Moduls -> dieses Modul laedt sich auch dann
+fehlerfrei, wenn Rod (noch) nicht aktiv ist. Damit crasht das Sleeve-Addon
+nicht mehr beim Install/Enable.
+"""
+from .rod_link import get_rod_database
 
-get_diameter_items_for_standard = rod_get_diameters
 
-PRESETS = {
-    "STANDARD_MUFFE": {"name": "Standard Muffe", "outer_add": 7, "wall": 3.5},
-    "REPARATUR": {"name": "Reparatur-Sleeve (+0.3mm)", "outer_add": 8, "wall": 4.0, "clearance": 0.3},
-    "ROHR_MUFFE": {"name": "Rohrmuffe", "outer_add": 10, "wall": 4.5},
-    "HEAVY_DUTY": {"name": "Heavy Duty", "outer_add": 12, "wall": 5.5},
-    "FLANSCH": {"name": "Mit Flansch", "outer_add": 8, "wall": 4.0, "flange": True},
-    "TRAPEZ": {"name": "Trapezgewinde Sleeve", "outer_add": 10, "wall": 5.0},
-}
+def get_standards():
+    try:
+        return get_rod_database().THREAD_STANDARDS
+    except Exception:
+        return {}
 
-def get_preset_items():
-    return [(k, v["name"], "") for k, v in PRESETS.items()]
+
+def get_diameter_items_for_standard(standard_key):
+    try:
+        return get_rod_database().get_diameter_items_for_standard(standard_key)
+    except Exception:
+        return []
+
+
+def resolve_thread_parameters(standard_key, token):
+    return get_rod_database().resolve_thread_parameters(standard_key, token)
+
+
+# Backwards-compat: STANDARDS als Property-aehnliches Lazy-Objekt.
+class _LazyStandards:
+    def __getitem__(self, key):
+        return get_standards()[key]
+
+    def __iter__(self):
+        return iter(get_standards())
+
+    def items(self):
+        return get_standards().items()
+
+    def keys(self):
+        return get_standards().keys()
+
+    def values(self):
+        return get_standards().values()
+
+    def get(self, key, default=None):
+        return get_standards().get(key, default)
+
+    def __contains__(self, key):
+        return key in get_standards()
+
+    def __len__(self):
+        return len(get_standards())
+
+
+STANDARDS = _LazyStandards()
