@@ -102,6 +102,7 @@ def create_sleeve(props):
     clearance = float(getattr(props, "clearance", 0.0))
     shape = getattr(props, "shape", "CYLINDER")
     add_flange = bool(getattr(props, "add_flange", False))
+    flange_both_sides = bool(getattr(props, "flange_both_sides", False))
     wall_thickness = float(props.wall_thickness)
     outer_add = float(getattr(props, "outer_add", 0.0))
 
@@ -116,6 +117,8 @@ def create_sleeve(props):
             outer_add = float(preset_cfg["outer_add"])
         if "clearance" in preset_cfg:
             clearance = float(preset_cfg["clearance"])
+        if "standard" in preset_cfg:
+            standard_key = preset_cfg["standard"]
 
     data = create_sleeve_data(
         spec=spec,
@@ -153,6 +156,6 @@ def create_sleeve(props):
     bpy.data.objects.remove(cutter, do_unlink=True)
 
     if add_flange:
-        sleeve = _add_flange(sleeve, outer_dia, length_mm, both_sides=False)
+        sleeve = _add_flange(sleeve, outer_dia, length_mm, both_sides=flange_both_sides)
 
     return sleeve
