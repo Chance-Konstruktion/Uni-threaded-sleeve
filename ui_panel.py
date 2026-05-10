@@ -52,6 +52,7 @@ class SLEEVE_Properties(bpy.types.PropertyGroup):
     outer_add: bpy.props.FloatProperty(name="Extra Aussen (mm)", default=0.0, min=0.0)
     clearance: bpy.props.FloatProperty(name="Spiel (mm)", default=0.0, min=0.0, max=1.0)
     add_flange: bpy.props.BoolProperty(name="Flansch", default=False)
+    flange_both_sides: bpy.props.BoolProperty(name="Flansch beidseitig", default=False)
     starts: bpy.props.IntProperty(name="Gaengig", default=1, min=1, max=4)
     handedness: bpy.props.EnumProperty(
         name="Richtung",
@@ -100,6 +101,8 @@ class SLEEVE_PT_main(bpy.types.Panel):
         col.prop(p, "outer_add")
         col.prop(p, "clearance")
         col.prop(p, "add_flange")
+        if p.add_flange:
+            col.prop(p, "flange_both_sides")
         col.prop(p, "starts")
         col.prop(p, "handedness")
         layout.operator("sleeve.create", icon="MOD_SCREW")

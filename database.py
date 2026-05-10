@@ -22,7 +22,10 @@ def get_diameter_items_for_standard(standard_key):
 
 
 def resolve_thread_parameters(standard_key, token):
-    return get_rod_database().resolve_thread_parameters(standard_key, token)
+    try:
+        return get_rod_database().resolve_thread_parameters(standard_key, token)
+    except Exception:
+        return None
 
 
 # Backwards-compat: STANDARDS als Property-aehnliches Lazy-Objekt.

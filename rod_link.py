@@ -10,6 +10,7 @@ import importlib
 import sys
 
 _ROD_BL_NAME = "Uni-threaded-rod"
+_rod_cache = None
 
 _NAME_CANDIDATES = (
     "Uni_threaded_rod",
@@ -34,12 +35,17 @@ def _scan_loaded():
 
 def get_rod():
     """Liefert das geladene Rod-Hauptmodul oder wirft ImportError."""
+    global _rod_cache
+    if _rod_cache is not None:
+        return _rod_cache
     mod = _scan_loaded()
     if mod is not None:
+        _rod_cache = mod
         return mod
     for name in _NAME_CANDIDATES:
         try:
-            return importlib.import_module(name)
+            _rod_cache = importlib.import_module(name)
+            return _rod_cache
         except Exception:
             continue
     raise ImportError(
