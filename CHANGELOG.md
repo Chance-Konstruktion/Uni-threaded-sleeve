@@ -10,8 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - New `NONE` preset entry (`– (manuell)`) lets users keep their manual values
   instead of being forced into one of the named presets.
+- New `pitch_override` property in the UI / `create_sleeve_data`. Set it to a
+  value > 0 to use a custom thread pitch (e.g. M10 x 1.0 instead of the Rod
+  default 1.5); 0 keeps the Rod-provided pitch.
+- Unit test suite under `tests/` (41 tests, mocked `bpy` and Rod) plus a
+  GitHub Actions workflow that compiles every module and runs the suite on
+  Python 3.10 / 3.11 / 3.12.
 
 ### Changed
+- A preset that names a `standard` Rod does not know is now ignored
+  instead of being passed through; the manually selected standard is kept.
 - `_NAME_CANDIDATES` in `rod_link` no longer lists hyphenated module names —
   Python cannot import those, so they were dead entries.
 - `create_sleeve_data` no longer returns `inner_diameter`. The value was

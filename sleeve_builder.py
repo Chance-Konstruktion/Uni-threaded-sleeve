@@ -105,6 +105,7 @@ def create_sleeve(props):
     flange_both_sides = bool(getattr(props, "flange_both_sides", False))
     wall_thickness = float(props.wall_thickness)
     outer_add = float(getattr(props, "outer_add", 0.0))
+    pitch_override = float(getattr(props, "pitch_override", 0.0))
 
     preset_key = getattr(props, "preset", None)
     preset_cfg = PRESETS.get(preset_key) if preset_key and preset_key != "NONE" else None
@@ -118,7 +119,15 @@ def create_sleeve(props):
         if "clearance" in preset_cfg:
             clearance = float(preset_cfg["clearance"])
         if "standard" in preset_cfg:
-            standard_key = preset_cfg["standard"]
+            candidate = preset_cfg["standard"]
+            try:
+                available = get_rod_database().THREAD_STANDARDS
+            except Exception:
+                available = {}
+            if candidate in available:
+                standard_key = candidate
+            # Sonst: still beim manuell ausgewaehlten Standard bleiben statt
+            # Rod mit einem unbekannten Key in den Fehler zu schicken.
 
     data = create_sleeve_data(
         spec=spec,
@@ -130,6 +139,7 @@ def create_sleeve(props):
         standard=standard_key,
         starts=starts,
         handedness=handedness,
+        pitch_override=pitch_override,
     )
 
     diameter = data["diameter_mm"]

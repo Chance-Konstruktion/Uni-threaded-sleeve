@@ -14,11 +14,13 @@ def create_sleeve_data(
     handedness="RIGHT",
     material="8.8",
     fit="6g/6H",
+    pitch_override=0.0,
 ):
     """Berechnet die Geometrie-Eckdaten fuer eine Gewindemuffe.
 
     Verwendet Rods api.thread() fuer Pitch/Profil und ermittelt daraus die
-    Innen-/Aussendurchmesser der Muffe.
+    Innen-/Aussendurchmesser der Muffe. Mit ``pitch_override > 0`` laesst sich
+    die Rod-Standardsteigung manuell uebersteuern (z.B. M10 x 1.0 statt 1.5).
     """
     rod_api = get_rod_api()
     thread_data = rod_api.thread(
@@ -30,6 +32,9 @@ def create_sleeve_data(
         internal=True,
         starts=starts,
     )
+
+    if pitch_override and pitch_override > 0:
+        thread_data["pitch_mm"] = float(pitch_override)
 
     nominal = thread_data["diameter_mm"]
     outer_dia = nominal + 2.0 * wall_thickness + outer_add
