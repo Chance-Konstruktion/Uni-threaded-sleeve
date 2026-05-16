@@ -52,6 +52,11 @@ class SLEEVE_Properties(bpy.types.PropertyGroup):
     wall_thickness: bpy.props.FloatProperty(name="Wandstaerke (mm)", default=3.5, min=1.0)
     outer_add: bpy.props.FloatProperty(name="Extra Aussen (mm)", default=0.0, min=0.0)
     clearance: bpy.props.FloatProperty(name="Spiel (mm)", default=0.0, min=0.0, max=1.0)
+    pitch_override: bpy.props.FloatProperty(
+        name="Pitch override (mm)",
+        description="Gewindesteigung manuell setzen (z.B. 1.0 fuer M10x1). 0 = Rod-Standardwert verwenden.",
+        default=0.0, min=0.0, soft_max=20.0,
+    )
     add_flange: bpy.props.BoolProperty(name="Flansch", default=False)
     flange_both_sides: bpy.props.BoolProperty(name="Flansch beidseitig", default=False)
     starts: bpy.props.IntProperty(name="Gaengig", default=1, min=1, max=4)
@@ -101,6 +106,7 @@ class SLEEVE_PT_main(bpy.types.Panel):
         col.prop(p, "wall_thickness")
         col.prop(p, "outer_add")
         col.prop(p, "clearance")
+        col.prop(p, "pitch_override")
         col.prop(p, "add_flange")
         if p.add_flange:
             col.prop(p, "flange_both_sides")
