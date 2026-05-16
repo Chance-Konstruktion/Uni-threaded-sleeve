@@ -107,7 +107,7 @@ def create_sleeve(props):
     outer_add = float(getattr(props, "outer_add", 0.0))
 
     preset_key = getattr(props, "preset", None)
-    preset_cfg = PRESETS.get(preset_key) if preset_key else None
+    preset_cfg = PRESETS.get(preset_key) if preset_key and preset_key != "NONE" else None
     if preset_cfg:
         if "flange" in preset_cfg:
             add_flange = bool(preset_cfg["flange"])
@@ -142,18 +142,19 @@ def create_sleeve(props):
     cutter = _build_thread_cutter(
         standard_key, diameter, pitch, length_mm, starts, handedness, clearance,
     )
-
-    bpy.context.view_layer.objects.active = sleeve
-    mod = sleeve.modifiers.new("ThreadCut", "BOOLEAN")
-    mod.operation = "DIFFERENCE"
-    mod.object = cutter
-    if hasattr(mod, "solver"):
-        try:
-            mod.solver = "EXACT"
-        except Exception:
-            pass
-    bpy.ops.object.modifier_apply(modifier="ThreadCut")
-    bpy.data.objects.remove(cutter, do_unlink=True)
+    try:
+        bpy.context.view_layer.objects.active = sleeve
+        mod = sleeve.modifiers.new("ThreadCut", "BOOLEAN")
+        mod.operation = "DIFFERENCE"
+        mod.object = cutter
+        if hasattr(mod, "solver"):
+            try:
+                mod.solver = "EXACT"
+            except Exception:
+                pass
+        bpy.ops.object.modifier_apply(modifier="ThreadCut")
+    finally:
+        bpy.data.objects.remove(cutter, do_unlink=True)
 
     if add_flange:
         sleeve = _add_flange(sleeve, outer_dia, length_mm, both_sides=flange_both_sides)

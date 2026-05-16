@@ -32,12 +32,10 @@ def create_sleeve_data(
     )
 
     nominal = thread_data["diameter_mm"]
-    inner_dia = nominal + clearance
     outer_dia = nominal + 2.0 * wall_thickness + outer_add
 
     return {
         **thread_data,
-        "inner_diameter": inner_dia,
         "outer_diameter": outer_dia,
         "wall_thickness": wall_thickness,
         "clearance": clearance,

@@ -14,11 +14,9 @@ _rod_cache = None
 
 _NAME_CANDIDATES = (
     "Uni_threaded_rod",
-    "Uni-threaded-rod",
     "Uni_threaded_rod_main",
-    "Uni-threaded-rod-main",
     "uni_threaded_rod",
-    "uni-threaded-rod",
+    "uni_threaded_rod_main",
 )
 
 

@@ -15,7 +15,8 @@ _ITEM_CACHE = {
 
 
 def _preset_items(self, context):
-    items = get_preset_items() or [("NONE", "-", "")]
+    items = [("NONE", "– (manuell)", "Manuelle Werte verwenden, kein Preset")]
+    items.extend(get_preset_items())
     _ITEM_CACHE["presets"] = items
     return items
 
