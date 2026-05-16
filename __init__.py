@@ -29,18 +29,15 @@ api = _runtime("api")
 sleeve_builder = _runtime("sleeve_builder")
 ui_panel = _runtime("ui_panel")
 
-classes = getattr(ui_panel, "classes", [])
-
-
 def register():
-    for cls in classes:
+    for cls in getattr(ui_panel, "classes", []):
         bpy.utils.register_class(cls)
     if hasattr(ui_panel, "register_properties"):
         ui_panel.register_properties()
 
 
 def unregister():
-    for cls in reversed(classes):
+    for cls in reversed(getattr(ui_panel, "classes", [])):
         try:
             bpy.utils.unregister_class(cls)
         except Exception:
