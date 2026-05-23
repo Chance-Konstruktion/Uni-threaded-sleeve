@@ -263,7 +263,6 @@ class TestDynamicStandards(unittest.TestCase):
     """Sobald Rod ein neues Gewinde kennt, taucht es ohne Code-Aenderung auf."""
 
     def test_new_standard_propagates_to_ui_dropdown(self):
-        import bpy  # gemockt
         db_mock = rod_link.get_rod_database()
         original = dict(db_mock.THREAD_STANDARDS)
         try:
