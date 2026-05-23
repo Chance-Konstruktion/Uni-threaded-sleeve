@@ -21,3 +21,20 @@ jobs:
         run: python -m compileall -q __init__.py api.py database.py presets.py rod_link.py sleeve_builder.py ui_panel.py
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out Uni-threaded-rod engine
+        uses: actions/checkout@v4
+        with:
+          repository: Chance-Konstruktion/Uni-threaded-rod
+          path: _rod_engine
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run tests against the real Rod engine
+        env:
+          UNI_THREADED_ROD_PATH: ${{ github.workspace }}/_rod_engine
+        run: python -m unittest discover -s tests -v
