@@ -38,3 +38,21 @@ jobs:
         env:
           UNI_THREADED_ROD_PATH: ${{ github.workspace }}/_rod_engine
         run: python -m unittest discover -s tests -v
+
+  blender-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out Uni-threaded-rod engine
+        uses: actions/checkout@v4
+        with:
+          repository: Chance-Konstruktion/Uni-threaded-rod
+          path: _rod_engine
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+      - name: Headless smoke test
+        env:
+          UNI_THREADED_ROD_PATH: ${{ github.workspace }}/_rod_engine
+        run: blender -b --factory-startup --python scripts/blender_smoke_test.py
