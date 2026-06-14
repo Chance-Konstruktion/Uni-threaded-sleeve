@@ -13,7 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `pitch_override` property in the UI / `create_sleeve_data`. Set it to a
   value > 0 to use a custom thread pitch (e.g. M10 x 1.0 instead of the Rod
   default 1.5); 0 keeps the Rod-provided pitch.
-- Unit test suite under `tests/` (41 tests, mocked `bpy` and Rod) plus a
+- Unit test suite under `tests/` (mocked `bpy` and Rod, plus an end-to-end
+  integration test against the real Rod engine) plus a
   GitHub Actions workflow that compiles every module and runs the suite on
   Python 3.10 / 3.11 / 3.12.
 
@@ -29,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   import time.
 
 ### Fixed
+- All thread standards offered by the Rod database can now actually be built,
+  not just the metric "first" ones. Two blockers were resolved:
+  - The thread cutter no longer hard-codes the `6H` tolerance class. Standards
+    that only define external classes (e.g. `TRAPEZOIDAL`, `ACME`, `STUB_ACME`,
+    `WHITWORTH_BSW`, `BSF`, `PIPE_G`) previously failed the Rod profile
+    validation; the builder now asks Rod for a defined internal class via
+    `get_default_tolerance_class(..., internal=True)`.
+  - The remaining root cause lived in Rod's `api.thread()` (case-sensitive
+    nominal tokens such as `Pg7`, `M8x1`, `M12x1.5` were mangled). That fix
+    ships in Uni-threaded-rod; a new end-to-end regression test
+    (`test_every_thread_standard_resolves_through_sleeve`) guards every
+    standard against regressions.
 - Preset values (`flange`, `wall`, `outer_add`, `clearance`) are now actually
   applied when building a sleeve. Previously the preset selection was ignored
   and the manual property values were always used — most visibly the
