@@ -6,7 +6,7 @@ import bpy
 bl_info = {
     "name": "Uni-threaded-sleeve",
     "author": "Chance-Konstruktion",
-    "version": (1, 4, 0),
+    "version": (1, 5, 0),
     "blender": (4, 0, 0),
     "location": "View3D > Sidebar > Uni-threaded-sleeve",
     "description": "Gewindemuffen-Generator (benoetigt Uni-threaded-rod).",

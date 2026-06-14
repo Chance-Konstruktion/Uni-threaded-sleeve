@@ -326,7 +326,7 @@ class TestUiPanel(unittest.TestCase):
 class TestPackage(unittest.TestCase):
     def test_blinfo(self):
         self.assertEqual(sleeve_pkg.bl_info["name"], "Uni-threaded-sleeve")
-        self.assertEqual(sleeve_pkg.bl_info["version"], (1, 4, 0))
+        self.assertEqual(sleeve_pkg.bl_info["version"], (1, 5, 0))
 
     def test_register_unregister(self):
         sleeve_pkg.register()
