@@ -32,11 +32,16 @@ def _build_thread_cutter(standard_key, diameter, pitch, length, starts, handedne
     standard = db.THREAD_STANDARDS.get(standard_key, {})
     taper_ratio = standard.get("special_params", {}).get("taper_ratio", 0.0)
 
+    # Nicht jede Norm kennt interne Toleranzklassen (z.B. TRAPEZOIDAL/ACME führen
+    # nur externe). Die passende, tatsächlich definierte Klasse vom Rod-Standard
+    # erfragen statt "6H" hart vorzugeben, sonst scheitert die Profilvalidierung.
+    tolerance_class = db.get_default_tolerance_class(standard_key, internal=True)
+
     profile, _warnings = geom.generate_profile(
         standard_key,
         diameter,
         pitch,
-        tolerance_class="6H",
+        tolerance_class=tolerance_class,
         internal=True,
         clearance=clearance,
         return_warnings=True,

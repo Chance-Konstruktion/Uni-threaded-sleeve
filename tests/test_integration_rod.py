@@ -144,6 +144,28 @@ class TestRealRodIntegration(unittest.TestCase):
         self.assertEqual(database.resolve_thread_parameters("METRIC_ISO", "10"), (10.0, 1.5))
         self.assertEqual(database.get_diameter_items_for_standard("DOES_NOT_EXIST"), [])
 
+    def test_every_thread_standard_resolves_through_sleeve(self):
+        """Regression: jeder von Rod angebotene Gewindetyp muss sich über die
+        Sleeve-API auflösen lassen, nicht nur die metrischen "ersten" Normen.
+
+        Früher hat Rods ``api.thread()`` den Spec großgeschrieben und ein
+        führendes ``M`` abgeschnitten; dadurch waren case-sensitive Tokens wie
+        ``Pg7`` (PG/CONDUIT_PG), ``M8x1`` (SPARK_PLUG) und ``M12x1.5``
+        (CABLE_GLAND_M) im Sleeve nicht baubar.
+        """
+        from uni_threaded_sleeve import api, database
+
+        standards = database.get_standards()
+        self.assertGreaterEqual(len(standards), 20)
+        for standard_key in standards:
+            items = database.get_diameter_items_for_standard(standard_key)
+            self.assertTrue(items, f"{standard_key} liefert keine Durchmesser")
+            token = items[0][0]
+            with self.subTest(standard=standard_key, token=token):
+                data = api.create_sleeve_data(spec=token, standard=standard_key)
+                self.assertGreater(data["diameter_mm"], 0.0)
+                self.assertGreater(data["pitch_mm"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
