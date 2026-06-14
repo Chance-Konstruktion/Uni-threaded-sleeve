@@ -47,7 +47,7 @@ Parametric threaded sleeve / coupling nut generator for Blender 4.0+.
 | Trapezgewinde     | 5.0  | 10.0        | –         | –      |
 
 ## Version
-1.4.0 — Blender 4.0+
+1.5.0 — Blender 4.0+
 
 ## License
 [GNU General Public License v3.0](LICENSE)
