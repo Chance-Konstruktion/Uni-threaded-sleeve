@@ -5,6 +5,7 @@ PRESETS = {
     "HEAVY_DUTY":     {"name": "Heavy Duty", "outer_add": 12.0, "wall": 5.5},
     "FLANSCH":        {"name": "Mit Flansch", "outer_add": 8.0, "wall": 4.0, "flange": True},
     "TRAPEZ":         {"name": "Trapezgewinde Sleeve", "outer_add": 10.0, "wall": 5.0, "standard": "TRAPEZOIDAL"},
+    "FLASCHENDECKEL": {"name": "Flaschenverschluss (PET)", "outer_add": 6.0, "wall": 2.0, "standard": "BOTTLE_PET", "clearance": 0.15},
 }
 
 
