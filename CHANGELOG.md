@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `FLASCHENDECKEL` preset (PET bottle closure) building on the new `BOTTLE_PET`
+  standard from Uni-threaded-rod. Bottle and closure thread standards are
+  available for internal sleeves automatically, since the standards database is
+  shared with the rod add-on.
+
 ## [1.5.0] — Blender 4.0+
 
 ### Added
