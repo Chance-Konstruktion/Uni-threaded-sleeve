@@ -12,6 +12,7 @@ Rod-Quelle: ``UNI_THREADED_ROD_PATH`` oder Schwester-Verzeichnis. Fehlt das
 Repo, wird das Modul sauber uebersprungen (statt zu scheitern).
 """
 import importlib
+import math
 import os
 import sys
 import types
@@ -26,6 +27,7 @@ _ROD_KEYS = (
     "Uni_threaded_rod.api",
     "Uni_threaded_rod.geometry_engine",
     "Uni_threaded_rod.mesh_builder",
+    "Uni_threaded_rod.mechanical_validation",
 )
 
 
@@ -132,10 +134,29 @@ class TestRealRodIntegration(unittest.TestCase):
         self.assertAlmostEqual(data["pitch_mm"], 1.75)
 
     def test_pitch_override_with_real_rod(self):
-        from uni_threaded_sleeve import api
+        from uni_threaded_sleeve import api, rod_link
 
+        default = api.create_sleeve_data(spec="M10", standard="METRIC_ISO")
         data = api.create_sleeve_data(spec="M10", standard="METRIC_ISO", pitch_override=1.0)
         self.assertAlmostEqual(data["pitch_mm"], 1.0)
+        self.assertTrue(data["profile_points"])
+        self.assertAlmostEqual(data["profile_points"][-1].y, 1.0)
+        self.assertNotAlmostEqual(default["profile_points"][-1].y, data["profile_points"][-1].y)
+
+        mechanics_api = rod_link.get_rod_mechanical_validation()
+        allowables = mechanics_api.allowables_from_property_class(data["property_class"])
+        expected_mechanics = mechanics_api.validate_combined_load_case(
+            axial_force_n=0.0,
+            transverse_force_n=0.0,
+            torsion_moment_nmm=0.0,
+            diameter=10.0,
+            pitch=1.0,
+            engagement_length=10.0,
+            allowable_tensile_mpa=allowables["allowable_tensile_mpa"],
+            allowable_shear_mpa=allowables["allowable_shear_mpa"],
+            standard_key="METRIC_ISO",
+        )
+        self.assertEqual(data["mechanics"], expected_mechanics)
 
     def test_database_forwarder_returns_real_values(self):
         from uni_threaded_sleeve import database
@@ -165,6 +186,15 @@ class TestRealRodIntegration(unittest.TestCase):
                 data = api.create_sleeve_data(spec=token, standard=standard_key)
                 self.assertGreater(data["diameter_mm"], 0.0)
                 self.assertGreater(data["pitch_mm"], 0.0)
+                self.assertTrue(data["profile_points"], f"{standard_key} hat kein Profil")
+                self.assertTrue(
+                    all(math.isfinite(point.x) and math.isfinite(point.y) for point in data["profile_points"]),
+                    f"{standard_key} enthält ungültige Profilpunkte",
+                )
+                self.assertAlmostEqual(
+                    data["profile_points"][-1].y, data["pitch_mm"],
+                    msg=f"{standard_key} Profilende passt nicht zur Steigung",
+                )
 
 
 if __name__ == "__main__":

@@ -86,7 +86,10 @@ def _mk_bpy_mock():
         collection=_CtxCollection(),
     )
     bpy.data = types.SimpleNamespace(
-        meshes=types.SimpleNamespace(new=MagicMock(return_value=MagicMock())),
+        meshes=types.SimpleNamespace(
+            new=MagicMock(return_value=MagicMock()),
+            remove=MagicMock(),
+        ),
         objects=types.SimpleNamespace(
             new=MagicMock(return_value=active),
             remove=MagicMock(),
@@ -113,7 +116,8 @@ def _mk_rod_mock():
         return []
 
     db.get_diameter_items_for_standard = _dia_items
-    db.resolve_thread_parameters = lambda key, token: {"diameter_mm": 10.0, "pitch_mm": 1.5}
+    db.get_default_tolerance_class = lambda key, internal=False: "6H" if internal else "6g"
+    db.resolve_thread_parameters = lambda key, token: (10.0, 1.5)
     rod.database = db
     rod.THREAD_STANDARDS = db.THREAD_STANDARDS
 
@@ -123,7 +127,18 @@ def _mk_rod_mock():
                   standard="METRIC_ISO", internal=True, starts=1, **kw):
         digits = "".join(c for c in str(spec) if c.isdigit() or c == ".")
         d = float(digits) if digits else 10.0
-        return {"diameter_mm": d, "pitch_mm": 1.5, "spec": spec, "standard": standard}
+        return {
+            "diameter_mm": d,
+            "pitch_mm": 1.5,
+            "spec": spec,
+            "standard": standard,
+            "length_mm": length,
+            "tolerance_class": "6H" if internal else "6g",
+            "property_class": "8.8",
+            "profile_points": [(d / 2, 0.0), (d / 2 - 0.5, 0.75), (d / 2, 1.5)],
+            "ratio_warnings": [],
+            "mechanics": {"pitch_mm": 1.5, "engagement_length": min(length, d)},
+        }
 
     api.thread = _thread
     rod.api = api
@@ -135,12 +150,29 @@ def _mk_rod_mock():
     mb = types.ModuleType("Uni_threaded_rod.mesh_builder")
     mb.create_thread_mesh = MagicMock(return_value=MagicMock())
     rod.mesh_builder = mb
+    mech = types.ModuleType("Uni_threaded_rod.mechanical_validation")
+    mech.allowables_from_property_class = lambda property_class: {
+        "allowable_tensile_mpa": 200.0,
+        "allowable_shear_mpa": 100.0,
+    }
+
+    def _validate_combined_load_case(**kwargs):
+        return {
+            "pitch_mm": kwargs["pitch"],
+            "engagement_length": kwargs["engagement_length"],
+            "standard": kwargs["standard_key"],
+        }
+
+    mech.validate_combined_load_case = _validate_combined_load_case
+    rod.mechanical_validation = mech
+
 
     sys.modules["Uni_threaded_rod"] = rod
     sys.modules["Uni_threaded_rod.database"] = db
     sys.modules["Uni_threaded_rod.api"] = api
     sys.modules["Uni_threaded_rod.geometry_engine"] = geom
     sys.modules["Uni_threaded_rod.mesh_builder"] = mb
+    sys.modules["Uni_threaded_rod.mechanical_validation"] = mech
     return rod
 
 

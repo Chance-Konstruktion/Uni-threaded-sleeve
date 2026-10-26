@@ -18,6 +18,8 @@ if importlib.util.find_spec("bpy") is None:
 
 import bmesh
 import bpy
+from mathutils import Vector
+from mathutils.bvhtree import BVHTree
 
 SLEEVE_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _env = os.environ.get("UNI_THREADED_ROD_PATH")
@@ -85,6 +87,111 @@ try:
     print(
         f"[smoke] sleeve OK: verts={len(mesh.vertices)} "
         f"max_r={max(radii):.5f} volume={volume:.3e} solid_outer={solid_outer:.3e}"
+    )
+
+    # Regression: the flange used to be added after the thread cutter and
+    # could cap the bore. Test both ends on a size whose flange is > 2 mm thick.
+    metric_items = addon.database.get_diameter_items_for_standard("METRIC_ISO")
+    size_token = None
+    for token, _label, _description in metric_items:
+        try:
+            if math.isclose(float(token), 30.0, abs_tol=1e-6):
+                size_token = token
+                break
+        except (TypeError, ValueError):
+            continue
+    assert size_token is not None, "METRIC_ISO size M30 missing from Rod database"
+
+    props.preset = "NONE"
+    props.standard = "METRIC_ISO"
+    props.diameter_enum = size_token
+    props.length = 20.0
+    props.wall_thickness = 3.5
+    props.outer_add = 0.0
+    props.clearance = 0.0
+    props.pitch_override = 0.0
+    props.shape = "CYLINDER"
+    props.starts = 1
+    props.handedness = "RIGHT"
+    props.add_flange = True
+    props.flange_both_sides = True
+
+    result = bpy.ops.sleeve.create()
+    assert "FINISHED" in result, f"Flanged sleeve operator did not finish: {result}"
+    flanged = bpy.context.active_object
+    assert flanged is not None and flanged.type == "MESH", "Flanged sleeve mesh missing"
+
+    flange_thickness_m = max(2.0, 37.0 * 0.08) / 1000.0
+    world_bottom_flange_z = flange_thickness_m * 0.5
+    world_top_flange_z = 0.020 - flange_thickness_m * 0.5
+    bm = bmesh.new()
+    try:
+        bm.from_mesh(flanged.data)
+        bm.transform(flanged.matrix_world)
+        non_manifold = [edge for edge in bm.edges if not edge.is_manifold]
+        assert not non_manifold, (
+            f"Flanged sleeve is not a single manifold solid: {len(non_manifold)} non-manifold edges"
+        )
+        tree = BVHTree.FromBMesh(bm)
+        for label, z_m in (
+            ("bottom flange", world_bottom_flange_z),
+            ("top flange", world_top_flange_z),
+        ):
+            hit, _normal, _face_index, distance = tree.ray_cast(
+                Vector((0.0, 0.0, z_m)), Vector((1.0, 0.0, 0.0)), 0.05
+            )
+            assert hit is not None, f"No surface hit while checking {label} bore"
+            assert distance < 0.020, (
+                f"{label} bore appears blocked: first radial surface at {distance:.4f} m"
+            )
+    finally:
+        bm.free()
+
+    print(
+        f"[smoke] flanged sleeve OK: verts={len(flanged.data.vertices)} "
+        f"bottom_z={world_bottom_flange_z:.5f} top_z={world_top_flange_z:.5f}"
+    )
+
+    # Integration matrix: real cutter with pitch override + left-hand,
+    # multi-start thread and hexagonal outer body.
+    props.preset = "NONE"
+    props.standard = "METRIC_ISO"
+    props.diameter_enum = "10.0"
+    props.length = 20.0
+    props.wall_thickness = 3.5
+    props.outer_add = 0.0
+    props.clearance = 0.1
+    props.pitch_override = 1.0
+    props.shape = "HEX"
+    props.starts = 2
+    props.handedness = "LEFT"
+    props.add_flange = False
+    props.flange_both_sides = False
+
+    result = bpy.ops.sleeve.create()
+    assert "FINISHED" in result, f"Hex/left-hand/override sleeve did not finish: {result}"
+    variant = bpy.context.active_object
+    assert variant is not None and variant.type == "MESH", "Variant sleeve mesh missing"
+    bm = bmesh.new()
+    try:
+        bm.from_mesh(variant.data)
+        bm.transform(variant.matrix_world)
+        non_manifold = [edge for edge in bm.edges if not edge.is_manifold]
+        assert not non_manifold, (
+            f"Hex/left-hand/override sleeve is not manifold: {len(non_manifold)} edges"
+        )
+        volume = abs(bm.calc_volume())
+        assert volume > 0.0, "Hex/left-hand/override sleeve has zero volume"
+        variant_radii = [math.hypot(v.co.x, v.co.y) for v in bm.verts]
+        assert max(variant_radii) >= 0.0080, (
+            f"Hex outer body dimensions look incorrect: max radius {max(variant_radii):.5f} m"
+        )
+    finally:
+        bm.free()
+
+    print(
+        f"[smoke] hex/left-hand/pitch-override sleeve OK: "
+        f"verts={len(variant.data.vertices)} volume={volume:.3e}"
     )
 finally:
     addon.unregister()
