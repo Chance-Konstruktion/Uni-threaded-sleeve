@@ -74,3 +74,79 @@ def get_rod_geometry_engine():
 
 def get_rod_mesh_builder():
     return _submodule("mesh_builder")
+
+
+def get_rod_mechanical_validation():
+    """Return Rod's validation helpers used for self-consistent API metadata."""
+    return _submodule("mechanical_validation")
+
+
+def require_rod_compatibility(include_mesh_builder=False):
+    """Load and validate Rod capabilities required for the requested operation.
+
+    Import remains lazy so Blender can discover/enable this add-on even when
+    Rod has not been enabled yet. Generation, however, must not silently run
+    against a partial or incompatible Rod installation.
+    """
+    try:
+        modules = {
+            "database": get_rod_database(),
+            "api": get_rod_api(),
+            "geometry_engine": get_rod_geometry_engine(),
+            "mechanical_validation": get_rod_mechanical_validation(),
+        }
+        if include_mesh_builder:
+            modules["mesh_builder"] = get_rod_mesh_builder()
+    except (ImportError, ModuleNotFoundError, AttributeError) as exc:
+        raise ImportError(
+            "Uni-threaded-sleeve benötigt eine kompatible Uni-threaded-rod-Installation. "
+            "Bitte Rod installieren/aktivieren und aktualisieren."
+        ) from exc
+
+    required = {
+        "database": ("THREAD_STANDARDS", "get_default_tolerance_class"),
+        "api": ("thread",),
+        "geometry_engine": ("generate_profile",),
+        "mechanical_validation": (
+            "allowables_from_property_class",
+            "validate_combined_load_case",
+        ),
+    }
+    if include_mesh_builder:
+        required["mesh_builder"] = ("create_thread_mesh",)
+
+    missing = []
+    for module_name, attributes in required.items():
+        module = modules[module_name]
+        for attribute in attributes:
+            value = getattr(module, attribute, None)
+            if attribute == "THREAD_STANDARDS":
+                if not isinstance(value, dict) or not value:
+                    missing.append(f"{module_name}.{attribute}")
+            elif not callable(value):
+                missing.append(f"{module_name}.{attribute}")
+
+    thread_function = modules["api"].thread
+    try:
+        import inspect
+
+        parameters = inspect.signature(thread_function).parameters
+        for parameter in ("internal", "starts", "standard", "fit", "material", "length"):
+            if parameter not in parameters and not any(
+                item.kind == inspect.Parameter.VAR_KEYWORD for item in parameters.values()
+            ):
+                missing.append(f"api.thread({parameter}=...)")
+    except (TypeError, ValueError):
+        # Some Blender-wrapped callables do not expose a Python signature;
+        # the required keyword contract is then verified by integration tests.
+        pass
+
+    if missing:
+        raise ImportError(
+            "Inkompatible Uni-threaded-rod-Version; fehlende API-Funktionen: "
+            + ", ".join(missing)
+            + ". Bitte Uni-threaded-rod aktualisieren."
+        )
+
+    return modules
+
