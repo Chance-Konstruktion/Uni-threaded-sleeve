@@ -4,6 +4,8 @@ Parametric threaded sleeve / coupling nut generator for Blender 4.0+.
 
 **Requires:** [Uni-threaded-rod](https://github.com/Chance-Konstruktion/Uni-threaded-rod) — the Rod engine provides thread data and geometry.
 
+**Roadmap:** [Shared Rod + Sleeve roadmap](https://github.com/Chance-Konstruktion/Uni-threaded-rod/blob/main/ROADMAP.md) · [Sleeve-specific roadmap](ROADMAP.md)
+
 ---
 
 ## Features
@@ -33,6 +35,7 @@ Parametric threaded sleeve / coupling nut generator for Blender 4.0+.
 | Wall thickness | ≥ 1 mm         | 3.5 mm  |
 | Extra outer    | ≥ 0 mm         | 0 mm    |
 | Clearance      | 0–1 mm         | 0 mm    |
+| Pitch override | 0 = Rod default; > 0 = custom pitch | 0 mm |
 | Starts         | 1–4            | 1       |
 | Handedness     | Right / Left   | Right   |
 
@@ -87,6 +90,7 @@ Parametrischer Gewindemuffen-Generator für Blender 4.0+.
 | Wandstärke  | ≥ 1 mm         | 3.5 mm   |
 | Extra Außen | ≥ 0 mm         | 0 mm     |
 | Spiel       | 0–1 mm         | 0 mm     |
+| Pitch override | 0 = Rod-Standard; > 0 = eigene Steigung | 0 mm |
 | Gängig      | 1–4            | 1        |
 | Richtung    | Rechts / Links | Rechts   |
 

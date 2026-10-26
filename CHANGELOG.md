@@ -8,10 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- `FLASCHENDECKEL` preset (PET bottle closure) building on the new `BOTTLE_PET`
-  standard from Uni-threaded-rod. Bottle and closure thread standards are
-  available for internal sleeves automatically, since the standards database is
-  shared with the rod add-on.
+- Headless Blender regression coverage for the flange bore, manifold output,
+  hexagonal bodies, left-hand multi-start threads, clearance and pitch override.
+- Real-Rod integration tests now check profile coordinates and pitch consistency
+  for every advertised standard, not only successful size resolution.
+
+### Changed
+- `pitch_override` now regenerates the profile and recalculates mechanical
+  metadata for the effective pitch; it no longer returns mixed old/new data.
+- Direct API calls reject non-finite or invalid dimensions, pitch overrides,
+  start counts, handedness, shapes and unknown presets before allocating meshes.
+- Rod compatibility is checked by operation: data-only API calls remain usable
+  outside Blender, while actual mesh creation requires the Blender mesh builder.
+
+### Fixed
+- Flanges are fused to the sleeve before the final thread cut, keeping the bore
+  open through both flange faces.
+- Failed builds remove temporary cutters, flange operands and partial sleeve
+  bodies instead of leaving orphan objects in the scene.
+- Presets that refer to a missing Rod standard now raise an actionable error
+  rather than silently building a different thread standard.
+- The Rod link no longer lets a stale mocked mechanics module contaminate the
+  real-engine integration test setup.
+
 
 ## [1.5.0] — Blender 4.0+
 
