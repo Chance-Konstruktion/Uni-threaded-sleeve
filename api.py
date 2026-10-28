@@ -1,5 +1,56 @@
 """Sleeve High-Level API. Delegiert die Gewindemechanik an Uni-threaded-rod."""
+import math
+
 from .rod_link import get_rod_api
+
+
+def _validate_parameters(length, wall_thickness, outer_add, clearance, starts, handedness, pitch_override):
+    """Validiert API-Eingaben, bevor ein Host-Objekt oder Gewinde erzeugt wird."""
+    numeric = {
+        "Länge": length,
+        "Wandstärke": wall_thickness,
+        "Außenzugabe": outer_add,
+        "Spiel": clearance,
+        "Steigungs-Override": pitch_override,
+    }
+    converted = {}
+    for name, value in numeric.items():
+        try:
+            converted[name] = float(value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(f"{name} muss eine endliche Zahl sein.") from exc
+        if not math.isfinite(converted[name]):
+            raise ValueError(f"{name} muss eine endliche Zahl sein.")
+
+    if converted["Länge"] <= 0.0:
+        raise ValueError("Länge muss größer als 0 mm sein.")
+    if converted["Wandstärke"] <= 0.0:
+        raise ValueError("Wandstärke muss größer als 0 mm sein.")
+    if converted["Außenzugabe"] < 0.0:
+        raise ValueError("Außenzugabe darf nicht negativ sein.")
+    if converted["Spiel"] < 0.0:
+        raise ValueError("Spiel darf nicht negativ sein.")
+    if converted["Steigungs-Override"] < 0.0:
+        raise ValueError("Steigungs-Override muss 0 (Standard) oder positiv sein.")
+
+    try:
+        parsed_starts = int(starts)
+        exact_starts = float(starts) == parsed_starts
+    except (TypeError, ValueError, OverflowError):
+        parsed_starts, exact_starts = 0, False
+    if not exact_starts or not 1 <= parsed_starts <= 4:
+        raise ValueError("Gängigkeit muss eine ganze Zahl zwischen 1 und 4 sein.")
+    if str(handedness).upper() not in {"RIGHT", "LEFT"}:
+        raise ValueError("Gewinderichtung muss RIGHT oder LEFT sein.")
+
+    return {
+        "length": converted["Länge"],
+        "wall_thickness": converted["Wandstärke"],
+        "outer_add": converted["Außenzugabe"],
+        "clearance": converted["Spiel"],
+        "starts": parsed_starts,
+        "pitch_override": converted["Steigungs-Override"],
+    }
 
 
 def create_sleeve_data(
@@ -22,6 +73,16 @@ def create_sleeve_data(
     Innen-/Aussendurchmesser der Muffe. Mit ``pitch_override > 0`` laesst sich
     die Rod-Standardsteigung manuell uebersteuern (z.B. M10 x 1.0 statt 1.5).
     """
+    validated = _validate_parameters(
+        length, wall_thickness, outer_add, clearance, starts, handedness, pitch_override
+    )
+    length = validated["length"]
+    wall_thickness = validated["wall_thickness"]
+    outer_add = validated["outer_add"]
+    clearance = validated["clearance"]
+    starts = validated["starts"]
+    pitch_override = validated["pitch_override"]
+
     rod_api = get_rod_api()
     thread_data = rod_api.thread(
         spec=spec,
@@ -33,8 +94,8 @@ def create_sleeve_data(
         starts=starts,
     )
 
-    if pitch_override and pitch_override > 0:
-        thread_data["pitch_mm"] = float(pitch_override)
+    if pitch_override > 0:
+        thread_data["pitch_mm"] = pitch_override
 
     nominal = thread_data["diameter_mm"]
     outer_dia = nominal + 2.0 * wall_thickness + outer_add
