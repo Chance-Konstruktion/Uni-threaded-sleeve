@@ -128,9 +128,22 @@ class TestApi(unittest.TestCase):
         self.assertAlmostEqual(d["clearance"], 0.3)
         self.assertAlmostEqual(d["outer_diameter"], 28.0)
 
-    def test_pitch_override_applies(self):
-        d = api.create_sleeve_data(spec="M10", pitch_override=1.0)
-        self.assertAlmostEqual(d["pitch_mm"], 1.0)
+    def test_pitch_override_applies_to_profile_and_mechanics(self):
+        default = api.create_sleeve_data(spec="M10")
+        overridden = api.create_sleeve_data(spec="M10", pitch_override=1.0)
+        self.assertAlmostEqual(overridden["pitch_mm"], 1.0)
+        self.assertNotEqual(
+            [(point.x, point.y) for point in default["profile_points"]],
+            [(point.x, point.y) for point in overridden["profile_points"]],
+        )
+        self.assertNotEqual(
+            default["mechanics"]["area_tensile_mm2"],
+            overridden["mechanics"]["area_tensile_mm2"],
+        )
+
+    def test_pitch_override_incompatible_with_diameter_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Steigung darf nicht größer"):
+            api.create_sleeve_data(spec="M10", pitch_override=11.0)
 
     def test_pitch_override_zero_keeps_rod_default(self):
         d = api.create_sleeve_data(spec="M10", pitch_override=0.0)
