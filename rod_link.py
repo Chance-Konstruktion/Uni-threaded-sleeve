@@ -74,3 +74,7 @@ def get_rod_geometry_engine():
 
 def get_rod_mesh_builder():
     return _submodule("mesh_builder")
+
+
+def get_rod_mechanical_validation():
+    return _submodule("mechanical_validation")
