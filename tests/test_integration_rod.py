@@ -26,6 +26,7 @@ _ROD_KEYS = (
     "Uni_threaded_rod.api",
     "Uni_threaded_rod.geometry_engine",
     "Uni_threaded_rod.mesh_builder",
+    "Uni_threaded_rod.mechanical_validation",
 )
 
 
