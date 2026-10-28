@@ -22,14 +22,14 @@ def _validate_parameters(length, wall_thickness, outer_add, clearance, starts, h
         if not math.isfinite(converted[name]):
             raise ValueError(f"{name} muss eine endliche Zahl sein.")
 
-    if converted["Länge"] <= 0.0:
-        raise ValueError("Länge muss größer als 0 mm sein.")
-    if converted["Wandstärke"] <= 0.0:
-        raise ValueError("Wandstärke muss größer als 0 mm sein.")
+    if not 5.0 <= converted["Länge"] <= 500.0:
+        raise ValueError("Länge muss zwischen 5 und 500 mm liegen.")
+    if converted["Wandstärke"] < 1.0:
+        raise ValueError("Wandstärke muss mindestens 1 mm betragen.")
     if converted["Außenzugabe"] < 0.0:
         raise ValueError("Außenzugabe darf nicht negativ sein.")
-    if converted["Spiel"] < 0.0:
-        raise ValueError("Spiel darf nicht negativ sein.")
+    if not 0.0 <= converted["Spiel"] <= 1.0:
+        raise ValueError("Spiel muss zwischen 0 und 1 mm liegen.")
     if converted["Steigungs-Override"] < 0.0:
         raise ValueError("Steigungs-Override muss 0 (Standard) oder positiv sein.")
 
