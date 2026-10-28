@@ -123,14 +123,66 @@ def _mk_rod_mock():
                   standard="METRIC_ISO", internal=True, starts=1, **kw):
         digits = "".join(c for c in str(spec) if c.isdigit() or c == ".")
         d = float(digits) if digits else 10.0
-        return {"diameter_mm": d, "pitch_mm": 1.5, "spec": spec, "standard": standard}
+        profile = [
+            types.SimpleNamespace(x=d / 2.0 - 0.1 * 1.5, y=0.0),
+            types.SimpleNamespace(x=d / 2.0, y=0.5 * 1.5),
+            types.SimpleNamespace(x=d / 2.0 + 0.1 * 1.5, y=1.5),
+        ]
+        return {
+            "diameter_mm": d,
+            "pitch_mm": 1.5,
+            "spec": spec,
+            "standard": standard,
+            "tolerance_class": "6H",
+            "property_class": "8.8",
+            "profile_points": profile,
+            "ratio_warnings": [],
+            "mechanics": {"sigma_von_mises_mpa": 0.0},
+        }
 
     api.thread = _thread
     rod.api = api
 
     geom = types.ModuleType("Uni_threaded_rod.geometry_engine")
-    geom.generate_profile = MagicMock(return_value=([(0, 0), (1, 0), (1, 1)], []))
+
+    def _generate_profile(standard, diameter, pitch, **kwargs):
+        return (
+            [
+                types.SimpleNamespace(x=diameter / 2.0 - 0.1 * pitch, y=0.0),
+                types.SimpleNamespace(x=diameter / 2.0, y=0.5 * pitch),
+                types.SimpleNamespace(x=diameter / 2.0 + 0.1 * pitch, y=pitch),
+            ],
+            [],
+        )
+
+    geom.generate_profile = _generate_profile
     rod.geometry_engine = geom
+
+    mech = types.ModuleType("Uni_threaded_rod.mechanical_validation")
+
+    def _validate_thread_input(diameter, pitch, length, starts, clearance=0.0,
+                               standard_key="METRIC_ISO"):
+        if pitch <= 0.0:
+            return types.SimpleNamespace(ok=False, message="Steigung muss > 0 sein.")
+        if pitch > diameter:
+            return types.SimpleNamespace(
+                ok=False, message="Ungültig: Steigung darf nicht größer als Durchmesser sein."
+            )
+        if length <= 0.0 or not 1 <= int(starts) <= 8:
+            return types.SimpleNamespace(ok=False, message="Ungültige Gewindeparameter.")
+        return types.SimpleNamespace(ok=True, message="")
+
+    mech.validate_thread_input = _validate_thread_input
+    mech.allowables_from_property_class = lambda property_class: {
+        "allowable_tensile_mpa": 480.0,
+        "allowable_shear_mpa": 250.0,
+    }
+    mech.validate_combined_load_case = lambda **kwargs: {
+        "sigma_von_mises_mpa": 0.0,
+        "min_safety_factor": float("inf"),
+        "passes": True,
+    }
+    rod.mechanical_validation = mech
 
     mb = types.ModuleType("Uni_threaded_rod.mesh_builder")
     mb.create_thread_mesh = MagicMock(return_value=MagicMock())
@@ -140,6 +192,7 @@ def _mk_rod_mock():
     sys.modules["Uni_threaded_rod.database"] = db
     sys.modules["Uni_threaded_rod.api"] = api
     sys.modules["Uni_threaded_rod.geometry_engine"] = geom
+    sys.modules["Uni_threaded_rod.mechanical_validation"] = mech
     sys.modules["Uni_threaded_rod.mesh_builder"] = mb
     return rod
 
