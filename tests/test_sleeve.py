@@ -136,9 +136,28 @@ class TestApi(unittest.TestCase):
         d = api.create_sleeve_data(spec="M10", pitch_override=0.0)
         self.assertAlmostEqual(d["pitch_mm"], 1.5)
 
-    def test_pitch_override_negative_ignored(self):
-        d = api.create_sleeve_data(spec="M10", pitch_override=-1.0)
-        self.assertAlmostEqual(d["pitch_mm"], 1.5)
+    def test_negative_pitch_override_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Steigungs-Override"):
+            api.create_sleeve_data(spec="M10", pitch_override=-1.0)
+
+    def test_invalid_dimensions_are_rejected_before_build(self):
+        invalid_cases = (
+            {"length": 0.0},
+            {"length": -1.0},
+            {"wall_thickness": 0.0},
+            {"wall_thickness": -2.0},
+            {"outer_add": -1.0},
+            {"clearance": -0.1},
+            {"starts": 0},
+            {"starts": 1.5},
+            {"starts": 5},
+            {"pitch_override": float("nan")},
+            {"length": float("inf")},
+        )
+        for overrides in invalid_cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(ValueError):
+                    api.create_sleeve_data(spec="M10", **overrides)
 
     def test_alias_sleeve(self):
         self.assertEqual(api.sleeve(spec="M8", length=20.0)["diameter_mm"], 8.0)
