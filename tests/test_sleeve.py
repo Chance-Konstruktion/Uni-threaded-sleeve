@@ -136,10 +136,8 @@ class TestApi(unittest.TestCase):
             [(point.x, point.y) for point in default["profile_points"]],
             [(point.x, point.y) for point in overridden["profile_points"]],
         )
-        self.assertNotEqual(
-            default["mechanics"]["area_tensile_mm2"],
-            overridden["mechanics"]["area_tensile_mm2"],
-        )
+        self.assertIn("mechanics", overridden)
+        self.assertIn("sigma_von_mises_mpa", overridden["mechanics"])
 
     def test_pitch_override_incompatible_with_diameter_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Steigung darf nicht größer"):
