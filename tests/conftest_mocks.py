@@ -159,6 +159,10 @@ def _mk_rod_mock():
     rod.geometry_engine = geom
 
     mech = types.ModuleType("Uni_threaded_rod.mechanical_validation")
+    mech.ISO_898_PROPERTY_CLASS_RM_MPA = {
+        "4.6": 400.0, "5.8": 500.0, "8.8": 800.0,
+        "10.9": 1000.0, "12.9": 1200.0,
+    }
 
     def _validate_thread_input(diameter, pitch, length, starts, clearance=0.0,
                                standard_key="METRIC_ISO"):
