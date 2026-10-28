@@ -1,7 +1,7 @@
 """Sleeve High-Level API. Delegiert die Gewindemechanik an Uni-threaded-rod."""
 import math
 
-from .rod_link import get_rod_api
+from .rod_link import get_rod_api, get_rod_geometry_engine, get_rod_mechanical_validation
 
 
 def _validate_parameters(length, wall_thickness, outer_add, clearance, starts, handedness, pitch_override):
@@ -95,6 +95,48 @@ def create_sleeve_data(
     )
 
     if pitch_override > 0:
+        # The rod API validates its normal-standard pitch. Revalidate the
+        # override and regenerate every pitch-dependent result so returned
+        # profile points and mechanics cannot describe a different thread.
+        mechanics_api = get_rod_mechanical_validation()
+        validation = mechanics_api.validate_thread_input(
+            diameter=thread_data["diameter_mm"],
+            pitch=pitch_override,
+            length=length,
+            starts=starts,
+            clearance=0.0,
+            standard_key=standard,
+        )
+        if not validation.ok:
+            raise ValueError(validation.message)
+
+        profile, ratio_warnings = get_rod_geometry_engine().generate_profile(
+            standard,
+            thread_data["diameter_mm"],
+            pitch_override,
+            tolerance_class=thread_data["tolerance_class"],
+            internal=True,
+            clearance=0.0,
+            return_warnings=True,
+        )
+        thread_data["profile_points"] = profile
+        thread_data["ratio_warnings"] = ratio_warnings
+        allowables = mechanics_api.allowables_from_property_class(
+            thread_data["property_class"]
+        )
+        thread_data["mechanics"] = mechanics_api.validate_combined_load_case(
+            axial_force_n=0.0,
+            transverse_force_n=0.0,
+            torsion_moment_nmm=0.0,
+            diameter=thread_data["diameter_mm"],
+            pitch=pitch_override,
+            engagement_length=min(
+                length, max(thread_data["diameter_mm"], pitch_override * 2.0)
+            ),
+            allowable_tensile_mpa=allowables["allowable_tensile_mpa"],
+            allowable_shear_mpa=allowables["allowable_shear_mpa"],
+            standard_key=standard,
+        )
         thread_data["pitch_mm"] = pitch_override
 
     nominal = thread_data["diameter_mm"]
@@ -106,7 +148,7 @@ def create_sleeve_data(
         "wall_thickness": wall_thickness,
         "clearance": clearance,
         "preset": preset,
-        "handedness": handedness,
+        "handedness": str(handedness).upper(),
     }
 
 
